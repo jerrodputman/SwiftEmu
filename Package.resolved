@@ -1,0 +1,23 @@
+{
+  "pins" : [
+    {
+      "identity" : "swiftnes",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jerrodputman/SwiftNES",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b4af475b43a1723d017dfb36e1b10c0e8b628a31"
+      }
+    },
+    {
+      "identity" : "swiftsdl2",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ctreffs/SwiftSDL2.git",
+      "state" : {
+        "revision" : "30a2886bd68e43fc19ba29b63ffe230ac0e4db7a",
+        "version" : "1.4.1"
+      }
+    }
+  ],
+  "version" : 2
+}

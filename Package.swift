@@ -1,14 +1,21 @@
 // swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
     name: "SwiftEmu",
+    platforms: [.macOS(.v13)],
+    dependencies: [
+        .package(url: "https://github.com/jerrodputman/SwiftNES", branch: "main"),
+        .package(url: "https://github.com/ctreffs/SwiftSDL2.git", .upToNextMajor(from: "1.4.0")),
+    ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
-            name: "SwiftEmu")
+            name: "SwiftEmu",
+            dependencies: [
+                "SwiftNES",
+                .product(name: "SDL", package: "SwiftSDL2"),
+            ]
+        ),
     ]
 )
