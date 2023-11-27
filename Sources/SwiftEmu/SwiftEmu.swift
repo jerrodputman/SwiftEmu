@@ -68,7 +68,7 @@ final class SwiftEmu {
 
         // Cartridge.
         let cartridgePath = CommandLine.arguments[1]
-        let cartridgeData = try! Data(contentsOf: URL(filePath: cartridgePath))
+        let cartridgeData = try! Data(contentsOf: URL(fileURLWithPath: cartridgePath))
         hardware.cartridge = try! Cartridge(data: cartridgeData)
         
         // Control pad.
