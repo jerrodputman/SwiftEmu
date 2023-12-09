@@ -23,19 +23,25 @@ import Foundation
 import SDL
 import SwiftNES
 
+enum SwiftEmuError: Error {
+    case unableToInitializeSDL(String)
+    case unableToCreateWindow(String)
+    case unableToCreateRenderer(String)
+}
+
 @main
 final class SwiftEmu {
-    static func main() async throws {
-        let emu = SwiftEmu()
+    static func main() throws {
+        let emu = try SwiftEmu()
         emu.run()
     }
     
-    init() {
-        let SDL_INIT_EVERYTHING = SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER | SDL_INIT_SENSOR
+    init() throws {
+        let SDL_INIT_EVERYTHING = SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER
         
         // Initialize SDL.
         guard SDL_Init(SDL_INIT_EVERYTHING) == 0 else {
-            fatalError("Error initializing SDL: \(String(cString: SDL_GetError()))")
+            throw SwiftEmuError.unableToInitializeSDL(SDL_GetErrorString())
         }
         
         // Create the application window.
@@ -45,36 +51,39 @@ final class SwiftEmu {
             Int32(SDL_WINDOWPOS_CENTERED_MASK),
             800, 600,
             SDL_WINDOW_SHOWN.rawValue | SDL_WINDOW_RESIZABLE.rawValue) else {
-            fatalError("SDL could not create a window!")
+            throw SwiftEmuError.unableToCreateWindow(SDL_GetErrorString())
         }
         
         // Create the renderer.
         guard let renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC.rawValue) else {
-            fatalError("SDL could not create a renderer!")
+            throw SwiftEmuError.unableToCreateRenderer(SDL_GetErrorString())
         }
         
+        // Use nearest neighbor scaling because we want big, chunky pixels.
+        // We can apply filters in the post-processing stage.
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest")
         
         self.window = window
         self.renderer = renderer
-        
-        let hardware = try! NES()
+        self.isRunning = true
+
+        // Create the hardware.
+        let hardware = try NES()
         self.hardware = hardware
         
+        // Create the control pad.
         let controlPad = ControlPad()
         self.controlPad = controlPad
         
-        self.isRunning = true
-
-        // Cartridge.
+        // Create the cartridge from the file data.
         let cartridgePath = CommandLine.arguments[1]
-        let cartridgeData = try! Data(contentsOf: URL(fileURLWithPath: cartridgePath))
-        hardware.cartridge = try! Cartridge(data: cartridgeData)
+        let cartridgeData = try Data(contentsOf: URL(fileURLWithPath: cartridgePath))
+        hardware.cartridge = try Cartridge(data: cartridgeData)
         
-        // Control pad.
+        // Connect the control pad to the hardware.
         hardware.controller1 = controlPad
         
-        // Video output.
+        // Connect the video output to the receiver.
         hardware.videoReceiver = self
         
         // Reset the hardware.
@@ -103,9 +112,7 @@ final class SwiftEmu {
             
             let elapsedMilliseconds = Double(end - start) / Double(SDL_GetPerformanceFrequency()) * 1000.0
 
-//            Thread.sleep(forTimeInterval: min(0, 16.667 - elapsedMilliseconds) * 1000.0)
-//            try await Task.sleep(for: .microseconds(elapsedMilliseconds * 1000.0))
-                SDL_Delay(UInt32(max(0, 16.6667 - elapsedMilliseconds)))
+            SDL_Delay(UInt32(max(0, 16.6667 - elapsedMilliseconds)))
         }
     }
     
@@ -114,11 +121,10 @@ final class SwiftEmu {
     
     private let window: OpaquePointer
     private let renderer: OpaquePointer
+    private var isRunning: Bool
     
     private let hardware: NES
     private let controlPad: ControlPad
-    
-    private var isRunning: Bool
     
     private var pixelBuffer: [UInt32] = []
     private var videoTexture: OpaquePointer?
@@ -206,4 +212,8 @@ extension SwiftEmu: VideoReceiver {
         
         pixelBuffer[y * Int(videoOutputParams.resolution.width) + x] = color
     }
+}
+
+func SDL_GetErrorString() -> String {
+    String(cString: SDL_GetError())
 }
